@@ -1,0 +1,43 @@
+# =============================================================================
+# requirements.txt — Simulador BJT: Ideal vs. Segunda Aproximación
+# =============================================================================
+# Instalar con:  pip install -r requirements.txt
+#
+# Python requerido: >= 3.10
+# =============================================================================
+
+
+# ── Interfaz gráfica moderna ──────────────────────────────────────────────────
+# Framework principal de la GUI. Extiende Tkinter con widgets modernos,
+# soporte para modo oscuro/claro y temas personalizables.
+customtkinter>=5.2.2
+
+
+# ── Procesamiento de imágenes ─────────────────────────────────────────────────
+# Dependencia directa de CustomTkinter para renderizar iconos e imágenes
+# dentro de los widgets CTkImage. También requerida para futuros assets
+# gráficos del Canvas (logos, fondos, diagramas de alta resolución).
+Pillow>=10.0.0
+
+
+# ── Tipado y anotaciones (stdlib backport) ────────────────────────────────────
+# Habilita `from __future__ import annotations` en Python 3.10+.
+# No requiere instalación adicional en Python >= 3.10 (incluido en stdlib).
+# Listado aquí solo como referencia de compatibilidad.
+# (sin entrada pip — stdlib)
+
+
+# =============================================================================
+# Notas de compatibilidad
+# =============================================================================
+# - tkinter viene incluido con la mayoría de distribuciones de Python.
+#   Si usas Linux y falta, instala con:
+#       sudo apt-get install python3-tk          # Debian/Ubuntu
+#       sudo dnf install python3-tkinter         # Fedora
+#       sudo pacman -S tk                        # Arch Linux
+#
+# - En macOS, se recomienda instalar Python desde python.org (no Homebrew)
+#   para asegurar la inclusión de tkinter con soporte completo de display.
+#
+# - En Windows, tkinter se incluye automáticamente con el instalador oficial.
+# =============================================================================
