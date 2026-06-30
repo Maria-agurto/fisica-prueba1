@@ -197,25 +197,15 @@ class PantallaCalculadora(ctk.CTkFrame):
                                        text_color=GREEN_OK)
         self.estado_lbl.grid(row=0, column=1, padx=24, sticky="e")
 
-        # Canvas del circuito (Integrante 3 lo reemplaza con visual_canvas.py)
-        canvas_frame = ctk.CTkFrame(centro, fg_color=BG_CARD,
-                                    corner_radius=12,
-                                    border_width=1, border_color=BORDER)
-        canvas_frame.grid(row=1, column=0, sticky="nsew", padx=28, pady=24)
-        canvas_frame.grid_columnconfigure(0, weight=1)
-        canvas_frame.grid_rowconfigure(1, weight=1)
-
-        ctk.CTkLabel(canvas_frame, text="ESQUEMA DEL CIRCUITO",
-                     font=("Consolas", 11, "bold"),
-                     text_color=ACCENT).grid(row=0, column=0,
-                     padx=20, pady=(16, 0), sticky="w")
-
-        self.circuit_canvas = tk.Canvas(canvas_frame, bg=BG_CARD,
-                                        highlightthickness=0, height=360)
-        self.circuit_canvas.grid(row=1, column=0, sticky="nsew",
-                                 padx=10, pady=10)
-        self.circuit_canvas.bind("<Configure>", self._dibujar_circuito)
-        self.labels_dinamicos = {}
+        # Contenedor reservado para el canvas real del Integrante 3
+        # (visual_canvas.CircuitoCanvas se inserta aquí desde main.py
+        # mediante el método público `obtener_contenedor_canvas()`).
+        self.canvas_frame = ctk.CTkFrame(centro, fg_color=BG_CARD,
+                                         corner_radius=12,
+                                         border_width=1, border_color=BORDER)
+        self.canvas_frame.grid(row=1, column=0, sticky="nsew", padx=28, pady=24)
+        self.canvas_frame.grid_columnconfigure(0, weight=1)
+        self.canvas_frame.grid_rowconfigure(0, weight=1)
 
         # Footer info
         info = ctk.CTkFrame(centro, fg_color=BG_PANEL, corner_radius=0,
@@ -227,126 +217,22 @@ class PantallaCalculadora(ctk.CTkFrame):
                      font=("Helvetica", 10),
                      text_color=TEXT_SEC).pack(side="left", padx=24, pady=10)
 
-    # ── Dibujo del circuito BJT ───────────────────────────────────────────
-    def _dibujar_circuito(self, event=None):
-        c = self.circuit_canvas
-        c.delete("all")
-        W = c.winfo_width() or 600
-        H = c.winfo_height() or 360
-        cx, cy = W // 2, H // 2 - 20
-
-        lw, clr, wht, gry = 2, ACCENT, TEXT_PRI, TEXT_SEC
-
-        def line(x1, y1, x2, y2, color=wht, width=lw):
-            c.create_line(x1, y1, x2, y2, fill=color, width=width)
-
-        def text(x, y, txt, color=ACCENT, size=10, anchor="center"):
-            c.create_text(x, y, text=txt, fill=color,
-                          font=("Consolas", size, "bold"), anchor=anchor)
-
-        def resistor(x, y, vertical=True, label="R", val=""):
-            if vertical:
-                w = 10; sh = 8 * 6 // 2
-                c.create_rectangle(x - w, y - sh, x + w, y + sh,
-                                   outline=wht, width=lw, fill=BG_CARD)
-            else:
-                h = 10; sw = 8 * 6 // 2
-                c.create_rectangle(x - sw, y - h, x + sw, y + h,
-                                   outline=wht, width=lw, fill=BG_CARD)
-            text(x + 22, y,      f"{label}", color=wht, size=9, anchor="w")
-            text(x + 22, y + 14, val,        color=gry, size=9, anchor="w")
-
-        def transistor_bjt(x, y):
-            r = 28
-            c.create_oval(x - r, y - r, x + r, y + r,
-                          outline=clr, width=2, fill=BG_CARD)
-            line(x - r, y, x - 10, y, color=clr)
-            line(x - 10, y - 20, x - 10, y + 20, color=clr, width=3)
-            line(x - 10, y - 15, x + r - 8, y - r + 8, color=clr)
-            line(x - 10, y + 15, x + r - 8, y + r - 8, color=clr)
-            ex, ey = x + r - 8, y + r - 8
-            c.create_polygon(ex, ey, ex - 10, ey - 4, ex - 4, ey - 10,
-                             fill=clr, outline=clr)
-            text(x + r + 6, y,      "Q1",    color=clr, size=9, anchor="w")
-            text(x + r + 6, y + 14, "BC337", color=gry, size=8, anchor="w")
-
-        top_y, bot_y   = cy - 130, cy + 140
-        left_x, right_x = cx - 180, cx + 170
-        bjt_x, bjt_y   = cx + 30, cy
-
-        line(right_x, top_y, right_x, bot_y)
-        line(left_x, top_y, right_x, top_y)
-        line(left_x, top_y, left_x, cy - 40)
-        line(left_x, cy + 40, left_x, bot_y)
-        line(left_x, bot_y, right_x, bot_y)
-
-        for _i, (dw, dy_) in enumerate([(18, 0), (12, 7), (6, 14)]):
-            c.create_line(cx, bot_y + dy_, cx + dw, bot_y + dy_, fill=wht, width=lw)
-            c.create_line(cx, bot_y + dy_, cx - dw, bot_y + dy_, fill=wht, width=lw)
-
-        text(right_x - 10, top_y - 14, "Vcc", color=clr, size=10)
-        self.labels_dinamicos["Vcc"] = c.create_text(
-            right_x - 10, top_y - 28, text="? V",
-            fill=wht, font=("Consolas", 9), anchor="center")
-
-        resistor(left_x,  cy,       vertical=True,  label="RB", val="")
-        line(left_x, cy - 40, left_x, cy - 28)
-        line(left_x, cy + 28, left_x, cy + 40)
-
-        resistor(right_x, cy - 60, vertical=True,  label="RC", val="")
-        line(right_x, top_y, right_x, cy - 88)
-        line(right_x, cy - 32, right_x, bjt_y - 18)
-
-        transistor_bjt(bjt_x, bjt_y)
-        line(left_x, cy, bjt_x - 28, cy, color=clr)
-        text(cx - 60, cy - 14, "VB", color=gry, size=9)
-        line(bjt_x + 20, bjt_y - 20, right_x, bjt_y - 60, color=clr)
-        line(bjt_x + 20, bjt_y + 20, bjt_x + 20, bot_y, color=clr)
-        line(bjt_x + 20, bot_y, right_x, bot_y)
-        text(bjt_x - 55, bjt_y + 50, "VBE", color=gry, size=9)
-
-        self.labels_dinamicos["VCE"] = c.create_text(
-            bjt_x + 70, bjt_y + 10, text="Vce = ---",
-            fill=clr, font=("Consolas", 9))
-        self.labels_dinamicos["IC"] = c.create_text(
-            bjt_x + 70, bjt_y + 26, text="Ic  = ---",
-            fill=clr, font=("Consolas", 9))
-        self.labels_dinamicos["STATUS"] = c.create_text(
-            bjt_x, bjt_y - 60, text="",
-            fill=GREEN_OK, font=("Consolas", 10, "bold"))
-
-    # ── Actualiza etiquetas del canvas con el dict `resultados` ──────────
-    def actualizar_etiquetas(self, resultados: dict):
+    # ── Actualiza la barra de estado superior con el resultado del cálculo ──
+    def actualizar_estado_ui(self, resultados: dict):
         """
-        Recibe el dict `resultados` del Integrante 2 y actualiza las
-        etiquetas dinámicas del canvas.
+        Actualiza únicamente la etiqueta de estado superior (✔ Activo /
+        ⚠ Saturado) en base al resultado de la Segunda Aproximación.
+        El dibujo del circuito en sí lo gestiona visual_canvas.py.
 
-        Claves usadas: resultados["segunda_aprox"]["Vce"],
-                       resultados["segunda_aprox"]["Ic"],
-                       resultados["segunda_aprox"]["estado"],
-                       datos_circuito["Vcc"]  (guardado internamente)
+        Args:
+            resultados: dict con claves "ideal" y "segunda_aprox".
         """
-        c = self.circuit_canvas
-        if not self.labels_dinamicos:
-            return
-
-        aprox    = resultados["segunda_aprox"]
-        Vce      = aprox["Vce"]
-        Ic_mA    = aprox["Ic"] * 1e3          # A → mA para mostrar
-        saturado = aprox["estado"] == "Saturación"
-        Vcc_val  = resultados.get("_Vcc_entrada", "?")  # guardado en _on_click
-
-        c.itemconfig(self.labels_dinamicos["VCE"],  text=f"Vce = {Vce:.2f} V")
-        c.itemconfig(self.labels_dinamicos["IC"],   text=f"Ic  = {Ic_mA:.2f} mA")
-        c.itemconfig(self.labels_dinamicos["Vcc"],  text=f"{Vcc_val} V")
+        aprox    = resultados.get("segunda_aprox", {})
+        saturado = aprox.get("estado") in ("Saturación", "Saturada")
 
         if saturado:
-            c.itemconfig(self.labels_dinamicos["STATUS"],
-                         text="⚠ SATURADO", fill=RED_SAT)
             self.estado_lbl.configure(text="⚠ Saturado", text_color=RED_SAT)
         else:
-            c.itemconfig(self.labels_dinamicos["STATUS"],
-                         text="✔ ACTIVO", fill=GREEN_OK)
             self.estado_lbl.configure(text="✔ Activo — Región Activa",
                                       text_color=GREEN_OK)
 
@@ -373,11 +259,6 @@ class PantallaCalculadora(ctk.CTkFrame):
         for key, val in defaults.items():
             self.entradas[key].delete(0, "end")
             self.entradas[key].insert(0, val)
-        c = self.circuit_canvas
-        for key in ("VCE", "IC", "STATUS"):
-            if key in self.labels_dinamicos:
-                c.itemconfig(self.labels_dinamicos[key],
-                             text="---" if key != "STATUS" else "")
         self.estado_lbl.configure(text="● Listo", text_color=GREEN_OK)
 
     def _toggle_tema(self):
@@ -388,6 +269,19 @@ class PantallaCalculadora(ctk.CTkFrame):
         else:
             ctk.set_appearance_mode("Dark")
             self.tema_btn.configure(text="☀  Modo Claro")
+
+    # ── Contenedor para el canvas real (Integrante 3) ───────────────────────
+    def obtener_contenedor_canvas(self) -> ctk.CTkFrame:
+        """
+        Retorna el frame vacío donde main.py debe montar el widget real
+        del circuito (visual_canvas.CircuitoCanvas).
+
+        Uso desde main.py:
+            contenedor = pantalla.obtener_contenedor_canvas()
+            canvas = visual_canvas.CircuitoCanvas(contenedor)
+            canvas.grid(row=0, column=0, sticky="nsew")
+        """
+        return self.canvas_frame
 
 
 # ═════════════════════════════════════════════════════════════════════════════
