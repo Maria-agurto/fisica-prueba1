@@ -2,77 +2,77 @@
 
 def calcular_modelos(datos_circuito):
     """
-    Corazón matemático del simulador. 
+    Corazón matemático del simulador.
     Recibe los datos de la UI y devuelve los cálculos de ambos modelos.
+
+    Contrato de entrada (acordado con el equipo, ver ui_arquitectura.py):
+        datos_circuito = {
+            "Vcc":  float,  # Voltios
+            "Rb":   float,  # Ohmios (resistencia de base)
+            "Rc":   float,  # Ohmios (resistencia de colector)
+            "Beta": float,  # Ganancia de corriente DC (hFE)
+        }
+
+    Nota: este modelo corresponde a un circuito de POLARIZACIÓN FIJA
+    (Rb conectada directamente entre Vcc y la Base), no a un divisor
+    de voltaje. Por eso no se usa Rth/Vth con R1/R2 — Rb actúa como la
+    resistencia total vista desde la base.
     """
-    
-    # 1. Extraer datos del diccionario de entrada. 
+
+    # 1. Extraer datos del diccionario de entrada.
     # Usamos .get() para evitar errores si la UI omite algún valor.
-    vcc = datos_circuito.get("Vcc", 0.0)
+    vcc  = datos_circuito.get("Vcc", 0.0)
     beta = datos_circuito.get("Beta", 0.0)
-    
-    # Resistencias (las convertimos a Ohmios internamente si es necesario, 
-    # pero asumimos que la UI ya las manda en Ohmios)
-    r1 = datos_circuito.get("R1", 1e9)  # Valor muy alto por defecto (circuito abierto)
-    r2 = datos_circuito.get("R2", 1e9)
-    rb = datos_circuito.get("Rb", 0.0)
-    rl = datos_circuito.get("Rl", 0.0)  # Equivalente a Rc en el colector
+    rb   = datos_circuito.get("Rb", 1.0)   # Ohmios — resistencia de base
+    rc   = datos_circuito.get("Rc", 0.0)   # Ohmios — resistencia de colector (= Rl)
 
-    # 2. Calcular el Equivalente de Thévenin en la base (divisor de voltaje)
-    # Vth = Vcc * (R2 / (R1 + R2))
-    # Rth = (R1 * R2) / (R1 + R2)
-    if r1 == 0:  # Prevención de división por cero si no hay R1
-        vth = vcc
-        rth = 0
-    else:
-        vth = vcc * (r2 / (r1 + r2))
-        rth = (r1 * r2) / (r1 + r2)
-    
-    # Resistencia total conectada a la base
-    rt_base = rth + rb
-
-    # 3. Función interna para calcular según el voltaje Base-Emisor (Vbe) asumido
+    # 2. Función interna para calcular según el voltaje Base-Emisor (Vbe) asumido
     def calcular_estado(vbe_asumido):
-        # Condición 1: Transistor en CORTE (El voltaje no supera al Vbe)
-        if vth <= vbe_asumido:
+        # Condición 1: Transistor en CORTE (Vcc no supera al Vbe asumido)
+        if vcc <= vbe_asumido:
             return {
-                "Vbe": 0.0 if vth <= 0 else round(vth, 4),
-                "Ib": 0.0,
-                "Ic": 0.0,
-                "Vce": round(vcc, 4),
+                "Vbe":    vbe_asumido,
+                "Ib":     0.0,
+                "Ic":     0.0,
+                "Vce":    round(vcc, 4),
                 "estado": "Corte"
             }
-        
-        # Condición 2: Transistor en región ACTIVA
-        ib = (vth - vbe_asumido) / rt_base
+
+        # Condición 2: Transistor en región ACTIVA (polarización fija)
+        # Ib = (Vcc - Vbe) / Rb
+        ib = (vcc - vbe_asumido) / rb if rb > 0 else 0.0
         ic = beta * ib
-        vce = vcc - (ic * rl)
+        vce = vcc - (ic * rc)
         estado = "Activa"
 
         # Condición 3: Diagnóstico de SATURACIÓN
         # Si Vce cae por debajo de 0.2V, el transistor se satura
-        vce_sat = 0.2 
+        vce_sat = 0.2
         if vce < vce_sat:
             vce = vce_sat
-            ic = (vcc - vce_sat) / rl if rl > 0 else ic
-            estado = "Saturada"
-        
+            ic = (vcc - vce_sat) / rc if rc > 0 else ic
+            estado = "Saturación"
+
         # Formateamos el diccionario de salida exacto que pide el documento
         return {
-            "Vbe": vbe_asumido,
-            "Ib": round(ib, 6),  # Redondeado a 6 decimales para Amperios (microamperios)
-            "Ic": round(ic, 6),
-            "Vce": round(vce, 4),
+            "Vbe":    vbe_asumido,
+            "Ib":     round(ib, 6),   # Amperios (redondeado para microamperios)
+            "Ic":     round(ic, 6),   # Amperios
+            "Vce":    round(vce, 4),
             "estado": estado
         }
 
-    # 4. Generar y retornar el diccionario de salida unificado
+    # 3. Generar y retornar el diccionario de salida unificado
     resultados = {
-        "ideal": calcular_estado(vbe_asumido=0.0),      # Modelo Ideal: Vbe = 0V
-        "segunda_aprox": calcular_estado(vbe_asumido=0.7) # 2da Aprox: Vbe = 0.7V
+        "ideal":         calcular_estado(vbe_asumido=0.0),  # Modelo Ideal: Vbe = 0V
+        "segunda_aprox": calcular_estado(vbe_asumido=0.7),  # 2da Aprox: Vbe = 0.7V
     }
 
     return resultados
+
+
+# Alias público — main.py invoca `calcular()` como nombre de contrato genérico.
+calcular = calcular_modelos
 
 
 # =====================================================================
@@ -81,16 +81,14 @@ def calcular_modelos(datos_circuito):
 if __name__ == "__main__":
     # Simulamos el diccionario que te enviará el Arquitecto UI
     datos_prueba = {
-        "Vcc": 9.0,     # 9 Voltios
-        "R1": 10000.0,  # 10k Ohmios
-        "R2": 2200.0,   # 2.2k Ohmios
-        "Rb": 1000.0,   # 1k Ohmios
-        "Rl": 100.0,    # 100 Ohmios
-        "Beta": 100.0   # Ganancia
+        "Vcc":  9.0,       # 9 Voltios
+        "Rb":   75_000.0,  # 75k Ohmios
+        "Rc":   700.0,     # 700 Ohmios
+        "Beta": 100.0,     # Ganancia
     }
 
     print("Calculando modelos...")
     resultados_finales = calcular_modelos(datos_prueba)
-    
+
     import pprint
     pprint.pprint(resultados_finales)
