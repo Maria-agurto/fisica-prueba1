@@ -83,6 +83,9 @@ class PanelResultados(ctk.CTkFrame):
             )
         )
 
+    # Alias público — main.py invoca `actualizar()` como nombre de contrato genérico.
+    actualizar = actualizar_tabla_resultados
+
 
     def exportar_csv(self):
 
@@ -109,3 +112,8 @@ class PanelResultados(ctk.CTkFrame):
 
             for fila in self.tabla.get_children():
                 escritor.writerow(self.tabla.item(fila)["values"])
+
+
+# Alias público — main.py instancia `TablaResultados(master)` como nombre
+# de contrato genérico acordado en el README.
+TablaResultados = PanelResultados
